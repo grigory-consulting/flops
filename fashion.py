@@ -35,4 +35,3 @@ model.eval()
 
     accuracy = correct/total
     print(f"Accuracy: {accuracy*100:.2f}%")
-    mlflow.log_metric("accuracy", accuracy)
