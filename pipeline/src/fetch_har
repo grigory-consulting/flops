@@ -1,0 +1,56 @@
+import io, zipfile, requests, shutil, sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+RAW = ROOT / "data" / "raw"
+DST = RAW / "UCI_HAR_Dataset"
+STAMP = RAW / "har_ready.stamp"
+URL = "https://archive.ics.uci.edu/static/public/240/human+activity+recognition+using+smartphones.zip"
+
+def find_har_root(base: Path) -> Path | None:
+    
+    for p in base.glob("**"):
+        if not p.is_dir():
+            continue
+        train_sig = p / "train" / "Inertial Signals"
+        test_sig  = p / "test" / "Inertial Signals"
+        if train_sig.is_dir() and test_sig.is_dir():
+            return p
+    return None
+
+def main():
+    RAW.mkdir(parents=True, exist_ok=True)
+
+    if DST.exists():
+        STAMP.write_text("ok\n")
+        print(f"HAR already present at {DST}")
+        return
+
+    print("Downloading HAR ZIP ...")
+    r = requests.get(URL, timeout=180)
+    r.raise_for_status()
+    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+        z.extractall(RAW)
+
+    har_root = find_har_root(RAW)
+    if har_root is None:
+        contents = "\n".join(str(p.relative_to(RAW)) for p in RAW.iterdir())
+        raise RuntimeError(
+            "Could not locate HAR root after extraction.\n"
+            f"data/raw contents:\n{contents}"
+        )
+
+    if DST.exists():
+        shutil.rmtree(DST)
+    if har_root != DST:
+        shutil.move(str(har_root), str(DST))
+
+    STAMP.write_text("ok\n")
+    print(f"Extracted to {DST} and wrote {STAMP}")
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print("FETCH_HAR_FAILED:", e, file=sys.stderr)
+        raise
