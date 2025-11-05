@@ -47,3 +47,17 @@ input_data = json.dumps({"instances": example_input})
 response = requests.post(url, data=input_data, headers={"Content-Type": "application/json"})
 
 print("Modell-Inferenz Ergebnis:", F.softmax(torch.tensor(response.json()["predictions"][0]), dim = 0))
+
+
+
+
+mlflow models serve \
+  -m "models:/Best_CNN/1" \
+  --host 127.0.0.1 \
+  --port 5007 \
+  --env-manager local
+
+
+
+
+
