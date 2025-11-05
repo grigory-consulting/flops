@@ -53,6 +53,53 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, s
 
 
 
+with mlflow.start_run() as run:
+        mlflow.log_param("optimizer", "adam") # 
+        mlflow.log_param("learning_rate", learning_rate)
+        mlflow.log_param("epochs", epochs)
+        mlflow.log_param("batch_size", batch_size)
+        mlflow.log_param("conv1", conv1)
+        mlflow.log_param("conv2", conv2)
+        mlflow.log_param("fc1", fc1)
+
+        start_time = time.time()
+        for epoch in range(epochs):
+            model.train()
+            running_loss, correct, total = 0.0, 0, 0
+            for images, labels in train_loader:
+                optimizer.zero_grad() # Gradienten auf Null setzen
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+                # Gradient descent
+                loss.backward()
+                optimizer.step()
+
+                running_loss += loss.item()
+                correct += (outputs.argmax(1) == labels).sum().item()
+                total += labels.size(0) 
+            
+            accuracy = correct / total 
+            mlflow.log_metric("loss", running_loss, step = epoch)
+            mlflow.log_metric("train_accuracy", accuracy, step = epoch)
+            
+            print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss:.4f}, Train accuracy: {accuracy:.4f}")
+        
+        model.eval()
+        correct, total = 0, 0
+
+        with torch.no_grad():
+            for images, labels in test_loader:
+                outputs = model(images)
+                predicted = torch.max(outputs.data, 1)[-1] # argmax von outputs
+                total += labels.size(0) # Gesamte Anzahl der Labels
+                correct += (predicted==labels).sum().item() # Anzahl der richtig klassifizierten Labels
+        
+        accuracy = correct / total
+        mlflow.log_metric("test_accuracy", accuracy)
+        mlflow.pytorch.log_model(model, "model" , input_example=input_example)
+        run_id = run.info.run_id
+        mlflow.set_tag("run_id", run_id)
+
 
 
 
