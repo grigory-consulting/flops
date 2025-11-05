@@ -40,3 +40,22 @@ output_schema = Schema([
     TensorSpec(np.dtype(np.float32), (-1, 10))
 ])
 signature = mlflow.models.signature.ModelSignature(inputs=input_schema, outputs=output_schema)
+
+
+
+
+
+
+
+# data loader 
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+
+
+
+
+
+
+
+
