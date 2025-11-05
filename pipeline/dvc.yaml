@@ -1,0 +1,84 @@
+stages:
+  fetch:
+    cmd: python src/fetch_har.py
+    deps:
+      - src/fetch_har.py
+    outs:
+      - data/raw/har_ready.stamp
+
+  preprocess_features:
+    cmd: python src/preprocess_features.py
+    deps:
+      - src/preprocess_features.py
+      - data/raw/har_ready.stamp
+      - data/raw/UCI_HAR_Dataset
+      - params.yaml
+    outs:
+      - data/processed/X_train_feat.parquet
+      - data/processed/X_test_feat.parquet
+      - data/processed/y_train.parquet
+      - data/processed/y_test.parquet
+    metrics:
+      - reports/preprocess_features.json
+  train_rf:
+    cmd: python src/train_rf.py
+    deps:
+      - src/train_rf.py
+      - data/processed/X_train_feat.parquet
+      - data/processed/X_test_feat.parquet
+      - data/processed/y_train.parquet
+      - data/processed/y_test.parquet
+    params:
+      - params.yaml: [rf]
+    outs:
+      - models/rf.pkl
+    metrics:
+      - reports/metrics_rf.json
+  preprocess_seq:
+    cmd: python src/preprocess_seq.py
+    deps:
+      - src/preprocess_seq.py
+      - data/raw/har_ready.stamp
+      - data/raw/UCI_HAR_Dataset
+    outs:
+      - data/processed/seq.npz
+  train_rnn:
+    cmd: python src/train_rnn.py
+    deps:
+      - src/train_rnn.py
+      - data/processed/seq.npz
+    outs:
+      - models/rnn.pth
+    metrics:
+      - reports/metrics_rnn.json
+    params:
+      - params.yaml:
+          - seed
+          - rnn.seq_len
+          - rnn.hidden_size
+          - rnn.n_layers
+          - rnn.dropout
+          - rnn.batch_size
+          - rnn.epochs
+          - rnn.lr
+          - rnn.clip_norm
+
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - models/rf.pkl
+      - models/rnn.pth
+      - data/processed/X_test_feat.parquet
+      - data/processed/y_test.parquet
+      - data/processed/seq.npz
+    metrics:
+      - reports/compare.json
+  drift:
+    cmd: python src/drift.py
+    deps:
+      - src/drift.py
+      - data/processed/X_train_feat.parquet
+      - data/processed/X_test_feat.parquet
+    metrics:
+      - reports/drift.json
